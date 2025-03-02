@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#3a7e44">
+  <title>App Avvisi Raccolta Differenziata - Comitato Vittoria Pulita</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icons/icon-192x192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  
+  <!-- Aggiunge il testo "Aggiungi alla home" per iOS -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Vittoria Pulita">
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background-color: #f0f0f0;
+    }
+    header {
+      background-color: #3a7e44; /* Verde invece di rosso */
+      color: white;
+      width: 100%;
+      text-align: center;
+      padding: 15px 0;
+      margin-bottom: 20px;
+    }
+    .logo-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      font-weight: bold;
+    }
+    #app-container {
+      width: 90%;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .date-selector {
+      margin: 20px 0;
+      text-align: center;
+    }
+    .notification-box {
+      margin: 20px 0;
+      text-align: center;
+      background-color: #f8f8f8;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .info-box {
+      background-color: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    .waste-box {
+      color: white;
+      font-weight: bold;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+      text-align: center;
+      font-size: 24px;
+    }
+    .footer {
+      font-size: 12px;
+      color: #666;
+      text-align: center;
+      margin-top: 20px;
+      padding: 10px;
+      width: 90%;
+    }
+    .btn {
+      background-color: #3a7e44;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-left: 10px;
+    }
+    .btn:hover {
+      background-color: #2c5f33;
+    }
+    #notification-popup {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 15px 20px;
+      background-color: #3a7e44;
+      color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      z-index: 1000;
+      display: none;
+      max-width: 300px;
+    }
+    .notification-close {
+      position: absolute;
+      top: 5px;
+      right: 10px;
+      cursor: pointer;
+    }
+    .time-input {
+      padding: 6px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 24px;
+      margin-right: 10px;
+      vertical-align: middle;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #3a7e44;
+    }
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
+    #install-prompt {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 15px;
+      margin: 20px 0;
+      display: none;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo-container">
+      Comitato spontaneo <em>Vittoria Pulita</em>
+    </div>
+  </header>
+  
+  <div id="install-prompt">
+    <p>Installa questa app sul tuo dispositivo per un accesso più rapido</p>
+    <button id="install-button" class="btn">Installa App</button>
+  </div>
+  
+  <div id="app-container">
+    <div class="date-selector">
+      <label for="date-picker">Seleziona una data: </label>
+      <input type="date" id="date-picker" class="time-input">
+    </div>
+    
+    <div class="notification-box">
+      <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
+        <label class="switch">
+          <input type="checkbox" id="notification-toggle">
+          <span class="slider"></span>
+        </label>
+        <span>Attiva avviso giornaliero</span>
+      </div>
+      
+      <div id="notification-time-container" style="display: none; margin-top: 15px;">
+        <label for="notification-time">Orario dell'avviso: </label>
+        <input type="time" id="notification-time" value="19:00" class="time-input">
+        <button id="save-notification" class="btn">Salva</button>
+      </div>
+      <p id="notification-status" style="font-size: 13px; margin-top: 8px; color: #555;"></p>
+    </div>
+    
+    <div class="info-box">
+      <h2 id="today-date" style="margin-top: 0;"></h2>
+      <p>Questa sera devi esporre:</p>
+      <div id="waste-type" class="waste-box"></div>
+      <p id="tomorrow-info"></p>
+    </div>
+    
+    <div class="info-box">
+      <h3 style="margin-top: 0;">Promemoria</h3>
+      <p>L'esposizione deve essere effettuata la sera prima della raccolta.</p>
+      <p>Per segnalare disservizi: <strong>800959324</strong></p>
+    </div>
+  </div>
+  
+  <div class="footer">
+    <p>App non ufficiale creata dal Comitato spontaneo <em>Vittoria Pulita</em></p>
+  </div>
+  
+  <div id="notification-popup">
+    <span class="notification-close">&times;</span>
+    <div id="notification-content"></div>
+  </div>
+
+  <script>
+    // Dati del calendario
+    const calendario = [
+      // Formato: [giorno, mese, anno, tipo di raccolta]
+      [3, 3, 2025, "UMIDO"],
+      [4, 3, 2025, "SECCO NON DIFFERENZIABILE"],
+      [5, 3, 2025, "CARTA E CARTONE"],
+      [6, 3, 2025, "UMIDO"],
+      [7, 3, 2025, "PLASTICA E METALLI"],
+      [8, 3, 2025, "UMIDO"],
+      [9, 3, 2025, ""], // Domenica
+      [10, 3, 2025, "UMIDO"],
+      [11, 3, 2025, "SECCO NON DIFFERENZIABILE"],
+      [12, 3, 2025, "VETRO"],
+      [13, 3, 2025, "UMIDO"],
+      [14, 3, 2025, "PLASTICA E METALLI"],
+      [15, 3, 2025, "UMIDO"],
+      [16, 3, 2025, ""], // Domenica
+      [17, 3, 2025, "UMIDO"],
+      [18, 3, 2025, "SECCO NON DIFFERENZIABILE"],
+      [19, 3, 2025, "CARTA E CARTONE"],
+      [20, 3, 2025, "UMIDO"],
+      [21, 3, 2025, "PLASTICA E METALLI"],
+      [22, 3, 2025, "UMIDO"],
+      [23, 3, 2025, ""], // Domenica
+      [24, 3, 2025, "UMIDO"],
+      [25, 3, 2025, "SECCO NON DIFFERENZIABILE"],
+      [26, 3, 2025, "VETRO"],
+      [27, 3, 2025, "UMIDO"],
+      [28, 3, 2025, "PLASTICA E METALLI"],
+      [29, 3, 2025, "UMIDO"],
+      [30, 3, 2025, ""], // Domenica
+      [31, 3, 2025, "UMIDO"],
+      [1, 4, 2025, "SECCO NON DIFFERENZIABILE"],
+      [2, 4, 2025, "CARTA E CARTONE"],
+      [3, 4, 2025, "UMIDO"],
+      [4, 4, 2025, "PLASTICA E METALLI"],
+      [5, 4, 2025, "UMIDO"]
+    ];
+
+    // Colori per i vari tipi di raccolta
+    const colori = {
+      "UMIDO": "#8B4513", // Marrone
+      "SECCO NON DIFFERENZIABILE": "#808080", // Grigio
+      "CARTA E CARTONE": "#00BFFF", // Azzurro
+      "VETRO": "#32CD32", // Verde
+      "PLASTICA E METALLI": "#FFFF00", // Giallo
+      "": "#FF0000", // Rosso (per domenica, nessuna raccolta)
+      "DATI MANCANTI": "#A9A9A9" // Grigio scuro per dati mancanti
+    };
+
+    // Colori del testo
+    const coloriTesto = {
+      "UMIDO": "white",
+      "SECCO NON DIFFERENZIABILE": "white",
+      "CARTA E CARTONE": "black",
+      "VETRO": "black",
+      "PLASTICA E METALLI": "black",
+      "": "white",
+      "DATI MANCANTI": "white"
+    };
+
+    // Elementi DOM
+    const datePicker = document.getElementById('date-picker');
+    const todayDateElement = document.getElementById('today-date');
+    const wasteTypeElement = document.getElementById('waste-type');
+    const tomorrowInfoElement = document.getElementById('tomorrow-info');
+    const notificationToggle = document.getElementById('notification-toggle');
+    const notificationTimeContainer = document.getElementById('notification-time-container');
+    const notificationTime = document.getElementById('notification-time');
+    const saveNotificationBtn = document.getElementById('save-notification');
+    const notificationStatus = document.getElementById('notification-status');
+    const notificationPopup = document.getElementById('notification-popup');
+    const notificationContent = document.getElementById('notification-content');
+    const notificationClose = document.querySelector('.notification-close');
+    const installPrompt = document.getElementById('install-prompt');
+    const installButton = document.getElementById('install-button');
+
+    // Variabile per memorizzare l'evento di installazione
+    let deferredPrompt;
+
+    // Imposta la data di oggi nel selettore
+    const oggi = new Date();
+    const dataFormattata = `${oggi.getFullYear()}-${(oggi.getMonth()+1).toString().padStart(2, '0')}-${oggi.getDate().toString().padStart(2, '0')}`;
+    datePicker.value = dataFormattata;
+
+    // Variabile per il timer della notifica
+    let notificationTimer = null;
+
+    // Registrazione del service worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(registration => {
+            console.log('ServiceWorker registrato correttamente: ', registration.scope);
+          })
+          .catch(error => {
+            console.log('Registrazione ServiceWorker fallita: ', error);
+          });
+      });
+    }
+
+    // Gestione dell'installazione della PWA
+    window.addEventListener('beforeinstallprompt', (e) => {
+      // Impedisci la visualizzazione automatica del popup di installazione
+      e.preventDefault();
+      // Memorizza l'evento per attivarlo più tardi
+      deferredPrompt = e;
+      // Mostra il prompt di installazione personalizzato
+      installPrompt.style.display = 'block';
+    });
+
+    installButton.addEventListener('click', () => {
+      // Nascondi il prompt di installazione
+      installPrompt.style.display = 'none';
+      // Mostra il prompt di installazione del browser
+      deferredPrompt.prompt();
+      // Attende che l'utente risponda al prompt
+      deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('Utente ha accettato l\'installazione');
+        } else {
+          console.log('Utente ha rifiutato l\'installazione');
+        }
+        // Resetta la variabile prompt, può essere usata solo una volta
+        deferredPrompt = null;
+      });
+    });
+
+    // Aggiorna le informazioni quando cambia la data
+    datePicker.addEventListener('change', aggiornaInformazioni);
+
+    // Gestione avvisi
+    notificationToggle.addEventListener('change', function() {
+      if (this.checked) {
+        notificationTimeContainer.style.display = 'block';
+        
+        // Richiedi permessi per le notifiche
+        if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+          Notification.requestPermission().then(function(permission) {
+            if (permission === 'granted') {
+              notificationStatus.textContent = 'Autorizzazioni concesse. Seleziona l\'orario e salva.';
+            } else {
+              notificationStatus.textContent = 'Autorizzazioni negate. Non potrai ricevere notifiche.';
+              notificationToggle.checked = false;
+              notificationTimeContainer.style.display = 'none';
+            }
+          });
+        } else if (Notification.permission === 'denied') {
+          notificationStatus.textContent = 'Autorizzazioni negate nel browser. Abilita le notifiche nelle impostazioni.';
+        } else {
+          notificationStatus.textContent = 'Seleziona l\'orario per l\'avviso giornaliero.';
+        }
+      } else {
+        notificationTimeContainer.style.display = 'none';
+        notificationStatus.textContent = '';
+        localStorage.removeItem('notificationEnabled');
+        localStorage.removeItem('notificationTime');
+        cancellaAvvisoGiornaliero();
+      }
+    });
+
+    saveNotificationBtn.addEventListener('click', function() {
+      const time = notificationTime.value;
+      if (time) {
+        localStorage.setItem('notificationEnabled', 'true');
+        localStorage.setItem('notificationTime', time);
+        
+        // Imposta il prossimo avviso
+        impostaAvvisoGiornaliero();
+        
+        notificationStatus.textContent = `Avviso impostato per le ${time} ogni giorno.`;
+        
+        // Mostra un popup di conferma
+        mostraNotificaPopup('Avviso impostato con successo! Riceverai un promemoria ogni giorno all\'orario specificato.');
+        
+        // Richiedi il permesso di inviare notifiche push se disponibile
+        if ('Notification' in window && Notification.permission !== 'granted') {
+          Notification.requestPermission();
+        }
+      }
+    });
+
+    // Chiudi il popup di notifica
+    notificationClose.addEventListener('click', function() {
+      notificationPopup.style.display = 'none';
+    });
+
+    // Inizializza l'app
+    aggiornaInformazioni();
+    caricaImpostazioniAvvisi();
+
+    function aggiornaInformazioni() {
+      // Ottieni la data selezionata
+      const dataSelezionata = new Date(datePicker.value + 'T00:00:00');
+      
+      // Calcola domani
+      const domani = new Date(dataSelezionata);
+      domani.setDate(domani.getDate() + 1);
+      
+      // Trova cosa raccolgono domani
+      const raccoltaDomani = trovaTipoRaccolta(domani.getDate(), domani.getMonth() + 1, domani.getFullYear());
+      
+      // Determina cosa esporre oggi
+      const esposizioneOggi = raccoltaDomani;
+      
+      // Formatta le date per la visualizzazione
+      const opzioni = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      const dataOggiTesto = dataSelezionata.toLocaleDateString('it-IT', opzioni);
+      const dataDomaniTesto = domani.toLocaleDateString('it-IT', opzioni);
+      
+      // Aggiorna gli elementi DOM
+      todayDateElement.textContent = dataOggiTesto;
+      tomorrowInfoElement.textContent = `Domani (${dataDomaniTesto}) è il giorno di raccolta: ${raccoltaDomani || "Nessuna raccolta"}`;
+      
+      if (esposizioneOggi === "") {
+        wasteTypeElement.textContent = "NESSUNA ESPOSIZIONE NECESSARIA";
+        wasteTypeElement.style.backgroundColor = colori[""];
+        wasteTypeElement.style.color = coloriTesto[""];
+      } else if (esposizioneOggi === "DATI MANCANTI") {
+        wasteTypeElement.textContent = "DATI MANCANTI";
+        wasteTypeElement.style.backgroundColor = colori["DATI MANCANTI"];
+        wasteTypeElement.style.color = coloriTesto["DATI MANCANTI"];
+        tomorrowInfoElement.textContent = "I dati del calendario non sono disponibili per questa data.";
+      } else {
+        // Verifica se è un giorno in cui si possono esporre anche i pannolini
+        // I pannolini possono essere esposti: lunedì, martedì, giovedì, venerdì, sabato
+        const domani = new Date(dataSelezionata);
+        domani.setDate(domani.getDate() + 1);
+        const giornoDomani = domani.getDay(); // 0=dom, 1=lun, 2=mar, 3=mer, 4=gio, 5=ven, 6=sab
+        const esponiPannolini = [1, 2, 4, 5, 6].includes(giornoDomani);
+        
+        if (esponiPannolini) {
+          wasteTypeElement.innerHTML = `${esposizioneOggi}<br><span style="font-size: 16px; font-weight: normal;">+ PANNOLINI</span>`;
+        } else {
+          wasteTypeElement.textContent = esposizioneOggi;
+        }
+        
+        wasteTypeElement.style.backgroundColor = colori[esposizioneOggi];
+        wasteTypeElement.style.color = coloriTesto[esposizioneOggi];
+      }
+    }
+
+    function trovaTipoRaccolta(giorno, mese, anno) {
+      // Verifica se la data è oltre il 5 aprile 2025
+      const dataLimite = new Date(2025, 3, 5); // 5 aprile 2025 (mese è 0-based in JavaScript)
+      const dataRichiesta = new Date(anno, mese - 1, giorno);
+      
+      if (dataRichiesta > dataLimite) {
+        return "DATI MANCANTI";
+      }
+      
+      // Cerca nel calendario
+      for (let i = 0; i < calendario.length; i++) {
+        if (calendario[i][0] === giorno && calendario[i][1] === mese && calendario[i][2] === anno) {
+          return calendario[i][3];
+        }
+      }
+      
+      // Se non trovato, utilizza la logica predefinita basata sul giorno della settimana
+      const data = new Date(anno, mese - 1, giorno);
+      const giornoSettimana = data.getDay(); // 0=domenica, 1=lunedì, ecc.
+      
+      switch (giornoSettimana) {
+        case 1: // Lunedì
+          return "UMIDO";
+        case 2: // Martedì
+          return "SECCO NON DIFFERENZIABILE";
+        case 3: // Mercoledì
+          // Determina se è il primo, secondo, terzo o quarto mercoledì del mese
+          const nSettimana = Math.ceil(giorno / 7);
+          return nSettimana % 2 === 1 ? "CARTA E CARTONE" : "VETRO";
+        case 4: // Giovedì
+          return "UMIDO";
+        case 5: // Venerdì
+          return "PLASTICA E METALLI";
+        case 6: // Sabato
+          return "UMIDO";
+        case 0: // Domenica
+          return ""; // Nessuna raccolta
+        default:
+          return "";
+      }
+    }
+
+    function mostraNotificaPopup(messaggio) {
+      notificationContent.textContent = messaggio;
+      notificationPopup.style.display = 'block';
+      
+      // Nascondi il popup dopo 5 secondi
+      setTimeout(() => {
+        notificationPopup.style.display = 'none';
+      }, 5000);
+    }
+
+    function caricaImpostazioniAvvisi() {
+      const isEnabled = localStorage.getItem('notificationEnabled') === 'true';
+      const savedTime = localStorage.getItem('notificationTime');
+      
+      if (isEnabled && savedTime) {
+        notificationToggle.checked = true;
+        notificationTimeContainer.style.display = 'block';
+        notificationTime.value = savedTime;
+        notificationStatus.textContent = `Avviso impostato per le ${savedTime} ogni giorno.`;
+        
+        // Imposta l'avviso
+        impostaAvvisoGiornaliero();
+      }
+    }
+
+    function impostaAvviso
